@@ -1,0 +1,7 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1"
+  ],
+  "id": "did:web:zcraeqdfigwm.usemoralis.com",
+  "controller": "did:key:z6MkphrJeADYB4wrGcPAJNPnNJhAcS9cmTy5ZRwQUB63t9bV"
+}
