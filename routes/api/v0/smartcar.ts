@@ -21,7 +21,7 @@ router.post("/authorize", async (req: any, res: any, next: any) => {
     const tokens = await smartcarClient.exchangeCode(req.body.code);
     const vehicles = await smartcar.getVehicles(tokens.accessToken);
 
-    await Promise.all(
+    const vehicleInfo = await Promise.all(
       vehicles.vehicles.map(async (v: any) => {
         const scVehicle = new smartcar.Vehicle(v, tokens.accessToken);
         const attributes = await scVehicle.attributes();
@@ -32,10 +32,13 @@ router.post("/authorize", async (req: any, res: any, next: any) => {
         moralisVehicle.set("refreshToken", tokens.refreshToken);
         moralisVehicle.set("refreshExpiration", tokens.refreshExpiration);
         await moralisVehicle.save();
+
+        delete attributes["meta"];
+        return attributes;
       })
     );
 
-    res.json({ success: true });
+    res.json({ success: true, vehicles: vehicleInfo });
   } catch (err) {
     next(err);
   }
