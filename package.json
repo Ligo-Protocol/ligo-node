@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "ts-node ./bin/www"
+    "start": "ts-node --files ./bin/www"
   },
   "dependencies": {
     "cookie-parser": "~1.4.4",
@@ -13,7 +13,9 @@
     "express": "~4.16.1",
     "key-did-provider-ed25519": "^2.0.0",
     "key-did-resolver": "^2.0.0",
+    "moralis": "^1.5.11",
     "morgan": "~1.9.1",
+    "smartcar": "^9.1.1",
     "web-did-resolver": "^2.0.16"
   },
   "devDependencies": {
