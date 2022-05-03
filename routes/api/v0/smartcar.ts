@@ -8,6 +8,8 @@ import KeyResolver from "key-did-resolver";
 import { DID } from "dids";
 import { fromString } from "uint8arrays/from-string";
 import { Ed25519Provider } from "key-did-provider-ed25519";
+import * as dagJose from "dag-jose";
+import { base58btc } from "multiformats/bases/base58";
 
 const smartcarClient = new smartcar.AuthClient({
   testMode: true,
@@ -109,8 +111,9 @@ router.get(
 
       await did.authenticate();
       const jwe = await did.createDagJWE(accessToken, [did.id]);
+      const encodedJwe = dagJose.encode(jwe);
 
-      res.json({ encryptedToken: jwe });
+      res.json({ encryptedToken: base58btc.encode(encodedJwe).toString() });
     } catch (err) {
       next(err);
     }
