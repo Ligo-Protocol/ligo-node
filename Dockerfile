@@ -12,4 +12,4 @@ RUN yarn install
 COPY . .
 
 EXPOSE 3000
-CMD [ "npx", "ts-node", "--files", "./bin/www" ]
+CMD [ "yarn", "start" ]
