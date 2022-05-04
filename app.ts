@@ -4,7 +4,8 @@ var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 
 var indexRouter = require("./routes/index");
-var apiv0Router = require("./routes/api/v0/smartcar");
+var apiv0SmartcatRouter = require("./routes/api/v0/smartcar");
+var apiv0ChainlinkRouter = require("./routes/api/v0/chainlink");
 
 var app = express();
 
@@ -15,6 +16,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/", indexRouter);
-app.use("/api/v0/smartcar", apiv0Router);
+app.use("/api/v0/smartcar", apiv0SmartcatRouter);
+app.use("/api/v0/chainlink", apiv0ChainlinkRouter);
 
 module.exports = app;
