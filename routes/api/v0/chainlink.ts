@@ -1,7 +1,6 @@
 import { Router } from "express";
 import "dotenv/config";
 import * as smartcar from "smartcar";
-import Moralis from "moralis/node";
 import { Resolver } from "did-resolver";
 import WebResolver from "web-did-resolver";
 import KeyResolver from "key-did-resolver";
@@ -10,10 +9,13 @@ import { fromString } from "uint8arrays/from-string";
 import { Ed25519Provider } from "key-did-provider-ed25519";
 import * as dagJose from "dag-jose";
 import { base58btc } from "multiformats/bases/base58";
+import { Requester, Validator } from "@chainlink/external-adapter";
 
-const smartcarClient = new smartcar.AuthClient({
-  testMode: true,
-});
+const customParams = {
+  vehicleId: ["vehicleId"],
+  encToken: ["encToken"],
+  endpoint: false,
+};
 
 const webResolver = WebResolver.getResolver();
 const keyResolver = KeyResolver.getResolver();
@@ -30,26 +32,30 @@ const did = new DID({
 
 var router = Router();
 
-router.get(
-  "/vehicles/:vehicleId/odometer",
-  async (req: any, res: any, next: any) => {
-    try {
-      const encryptedToken = req.query.encryptedToken;
-      const vehicleId = req.params.vehicleId;
+router.post("/", async (req: any, res: any, next: any) => {
+  // The Validator helps you validate the Chainlink request data
+  const validator = new Validator(req.body, customParams);
 
-      const jwe = dagJose.decode(base58btc.decode(encryptedToken)) as any;
+  const jobRunID = validator.validated.id;
 
-      await did.authenticate();
-      const accessToken = await did.decryptDagJWE(jwe);
+  try {
+    // Validating vehicleId
+    const vehicleId = validator.validated.data.vehicleId;
+    // Validating encryptedToken
+    const encryptedToken = validator.validated.data.encToken;
 
-      const scVehicle = new smartcar.Vehicle(vehicleId, accessToken);
-      const odometer = await scVehicle.odometer();
+    const jwe = dagJose.decode(base58btc.decode(encryptedToken)) as any;
 
-      res.json(odometer);
-    } catch (err) {
-      next(err);
-    }
+    await did.authenticate();
+    const accessToken = await did.decryptDagJWE(jwe);
+
+    const scVehicle = new smartcar.Vehicle(vehicleId, accessToken);
+    const odometer = await scVehicle.odometer();
+
+    res.json({ jobRunID, data: odometer });
+  } catch (err) {
+    next(err);
   }
-);
+});
 
 module.exports = router;
