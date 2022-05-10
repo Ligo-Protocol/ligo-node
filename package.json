@@ -6,6 +6,7 @@
     "start": "ts-node --files ./app.ts"
   },
   "dependencies": {
+    "@chainlink/external-adapter": "^0.2.6",
     "cookie-parser": "~1.4.4",
     "dag-jose": "^1.0.0",
     "debug": "~2.6.9",
