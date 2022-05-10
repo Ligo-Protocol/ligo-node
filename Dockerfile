@@ -12,4 +12,5 @@ RUN yarn install
 COPY . .
 
 EXPOSE 3000
+EXPOSE 3001
 ENTRYPOINT [ "yarn", "start" ]
