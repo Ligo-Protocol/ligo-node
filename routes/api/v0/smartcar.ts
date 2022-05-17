@@ -10,6 +10,12 @@ import { fromString } from "uint8arrays/from-string";
 import { Ed25519Provider } from "key-did-provider-ed25519";
 import * as dagJose from "dag-jose";
 import { base58btc } from "multiformats/bases/base58";
+var cors = require("cors");
+
+var corsOptions = {
+  origin: "https://ligo-node.oort.codyhatfield.me",
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+};
 
 const smartcarClient = new smartcar.AuthClient({
   testMode: true,
@@ -30,43 +36,50 @@ const did = new DID({
 
 var router = Router();
 
-router.post("/authorize", async (req: any, res: any, next: any) => {
-  try {
-    await Moralis.start({
-      serverUrl: process.env.MORALIS_SERVER_URL,
-      appId: process.env.MORALIS_APP_ID,
-      masterKey: process.env.MORALIS_MASTER_KEY,
-    });
-    const Vehicle = Moralis.Object.extend("Vehicle");
+router.options("/authorize", cors(corsOptions));
+router.post(
+  "/authorize",
+  cors(corsOptions),
+  async (req: any, res: any, next: any) => {
+    try {
+      await Moralis.start({
+        serverUrl: process.env.MORALIS_SERVER_URL,
+        appId: process.env.MORALIS_APP_ID,
+        masterKey: process.env.MORALIS_MASTER_KEY,
+      });
+      const Vehicle = Moralis.Object.extend("Vehicle");
 
-    const tokens = await smartcarClient.exchangeCode(req.body.code);
-    const vehicles = await smartcar.getVehicles(tokens.accessToken);
+      const tokens = await smartcarClient.exchangeCode(req.body.code);
+      const vehicles = await smartcar.getVehicles(tokens.accessToken);
 
-    const vehicleInfo = await Promise.all(
-      vehicles.vehicles.map(async (v: any) => {
-        const scVehicle = new smartcar.Vehicle(v, tokens.accessToken);
-        const attributes = await scVehicle.attributes();
+      const vehicleInfo = await Promise.all(
+        vehicles.vehicles.map(async (v: any) => {
+          const scVehicle = new smartcar.Vehicle(v, tokens.accessToken);
+          const attributes = await scVehicle.attributes();
 
-        const moralisVehicle = new Vehicle();
-        moralisVehicle.set("vehicleId", attributes.id);
-        moralisVehicle.set("accessToken", tokens.accessToken);
-        moralisVehicle.set("refreshToken", tokens.refreshToken);
-        moralisVehicle.set("refreshExpiration", tokens.refreshExpiration);
-        await moralisVehicle.save();
+          const moralisVehicle = new Vehicle();
+          moralisVehicle.set("vehicleId", attributes.id);
+          moralisVehicle.set("accessToken", tokens.accessToken);
+          moralisVehicle.set("refreshToken", tokens.refreshToken);
+          moralisVehicle.set("refreshExpiration", tokens.refreshExpiration);
+          await moralisVehicle.save();
 
-        delete attributes["meta"];
-        return attributes;
-      })
-    );
+          delete attributes["meta"];
+          return attributes;
+        })
+      );
 
-    res.json({ success: true, vehicles: vehicleInfo });
-  } catch (err) {
-    next(err);
+      res.json({ success: true, vehicles: vehicleInfo });
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
+router.options("/vehicles/:vehicleId/token", cors(corsOptions));
 router.get(
   "/vehicles/:vehicleId/token",
+  cors(corsOptions),
   async (req: any, res: any, next: any) => {
     // TODO: Authentication
 
