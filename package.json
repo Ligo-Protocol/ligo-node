@@ -8,6 +8,7 @@
   "dependencies": {
     "@chainlink/external-adapter": "^0.2.6",
     "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
     "dag-jose": "^1.0.0",
     "debug": "~2.6.9",
     "dids": "^2.4.0",
