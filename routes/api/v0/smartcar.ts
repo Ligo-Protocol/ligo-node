@@ -13,7 +13,7 @@ import { base58btc } from "multiformats/bases/base58";
 var cors = require("cors");
 
 var corsOptions = {
-  origin: "https://ligo-node.oort.codyhatfield.me",
+  origin: /oort\.codyhatfield\.me$/,
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
