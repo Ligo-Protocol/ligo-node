@@ -144,7 +144,20 @@ router.get(
       const accessToken = await getAccessToken(res, userId);
 
       const vehicles = await smartcar.getVehicles(accessToken);
-      res.json({ success: true, ...vehicles });
+      const vehicleInfo = await Promise.all(
+        vehicles.vehicles.map(async (v: any) => {
+          const vehicle = new smartcar.Vehicle(v, accessToken);
+          const attributes = await vehicle.attributes();
+          const vin = await vehicle.vin();
+
+          return {
+            ...attributes,
+            vin: vin.vin,
+          };
+        })
+      );
+
+      res.json({ success: true, vehicles: vehicleInfo });
     } catch (err) {
       next(err);
     }
