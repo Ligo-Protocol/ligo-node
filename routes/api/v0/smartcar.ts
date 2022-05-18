@@ -36,6 +36,38 @@ const did = new DID({
 
 var router = Router();
 
+async function getAccessToken(res: any, userId: any) {
+  const SmartcarUser = Moralis.Object.extend("SmartcarUser");
+  const query = new Moralis.Query(SmartcarUser);
+  query.equalTo("userId", userId);
+  const results = await query.find();
+
+  if (results.length == 0) {
+    res.sendStatus(404);
+    return;
+  }
+
+  const user = results[0];
+  let accessToken = user.get("accessToken");
+
+  try {
+    await smartcar.getUser(accessToken);
+  } catch (err) {
+    const refreshToken = user.get("refreshToken");
+    const tokens = await smartcarClient.exchangeRefreshToken(refreshToken);
+
+    accessToken = tokens.accessToken;
+
+    user.set("accessToken", tokens.accessToken);
+    user.set("refreshToken", tokens.refreshToken);
+    user.set("refreshExpiration", tokens.refreshExpiration);
+    await user.save();
+  }
+
+  await smartcar.getUser(accessToken);
+  return accessToken;
+}
+
 router.options("/users/:userId", cors(corsOptions));
 router.post(
   "/users/:userId",
@@ -49,10 +81,8 @@ router.post(
         masterKey: process.env.MORALIS_MASTER_KEY,
       });
       const SmartcarUser = Moralis.Object.extend("SmartcarUser");
-      const Vehicle = Moralis.Object.extend("Vehicle");
 
       const tokens = await smartcarClient.exchangeCode(req.body.code);
-      const vehicles = await smartcar.getVehicles(tokens.accessToken);
       const smartcarUser = await smartcar.getUser(tokens.accessToken);
 
       const moralisSmartcarUser = new SmartcarUser();
@@ -61,25 +91,10 @@ router.post(
       moralisSmartcarUser.set("accessToken", tokens.accessToken);
       moralisSmartcarUser.set("refreshToken", tokens.refreshToken);
       moralisSmartcarUser.set("refreshExpiration", tokens.refreshExpiration);
-      const savedUser = await moralisSmartcarUser.save();
+      await moralisSmartcarUser.save();
 
-      const vehicleInfo = await Promise.all(
-        vehicles.vehicles.map(async (v: any) => {
-          const scVehicle = new smartcar.Vehicle(v, tokens.accessToken);
-          const attributes = await scVehicle.attributes();
-
-          const moralisVehicle = new Vehicle();
-          moralisVehicle.set("vehicleId", attributes.id);
-          moralisVehicle.set("smartcarUser", savedUser);
-          moralisVehicle.setACL(new Moralis.ACL(userId));
-          await moralisVehicle.save();
-
-          delete attributes["meta"];
-          return attributes;
-        })
-      );
-
-      res.json({ success: true, vehicles: vehicleInfo });
+      const vehicles = await smartcar.getVehicles(tokens.accessToken);
+      res.json({ success: true, ...vehicles });
     } catch (err) {
       next(err);
     }
@@ -101,40 +116,35 @@ router.get(
       });
 
       const userId = req.params.userId;
-      const SmartcarUser = Moralis.Object.extend("SmartcarUser");
-      const query = new Moralis.Query(SmartcarUser);
-      query.equalTo("userId", userId);
-      const results = await query.find();
-
-      if (results.length == 0) {
-        res.sendStatus(404);
-        return;
-      }
-
-      const user = results[0];
-      let accessToken = user.get("accessToken");
-
-      try {
-        await smartcar.getUser(accessToken);
-      } catch (err) {
-        const refreshToken = user.get("refreshToken");
-        const tokens = await smartcarClient.exchangeRefreshToken(refreshToken);
-
-        accessToken = tokens.accessToken;
-
-        user.set("accessToken", tokens.accessToken);
-        user.set("refreshToken", tokens.refreshToken);
-        user.set("refreshExpiration", tokens.refreshExpiration);
-        await user.save();
-      }
-
-      await smartcar.getUser(accessToken);
+      const accessToken = await getAccessToken(res, userId);
 
       await did.authenticate();
       const jwe = await did.createDagJWE(accessToken, [did.id]);
       const encodedJwe = dagJose.encode(jwe);
 
       res.json({ encryptedToken: base58btc.encode(encodedJwe).toString() });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.options("/users/:userId/vehicles", cors(corsOptions));
+router.get(
+  "/users/:userId/vehicles",
+  cors(corsOptions),
+  async (req: any, res: any, next: any) => {
+    try {
+      await Moralis.start({
+        serverUrl: process.env.MORALIS_SERVER_URL,
+        appId: process.env.MORALIS_APP_ID,
+        masterKey: process.env.MORALIS_MASTER_KEY,
+      });
+      const userId = req.params.userId;
+      const accessToken = await getAccessToken(res, userId);
+
+      const vehicles = await smartcar.getVehicles(accessToken);
+      res.json({ success: true, ...vehicles });
     } catch (err) {
       next(err);
     }
