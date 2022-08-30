@@ -52,8 +52,10 @@ router.post("/", async (req: any, res: any, next: any) => {
     const scVehicle = new smartcar.Vehicle(vehicleId, accessToken);
     const odometer = await scVehicle.odometer();
     const location = await scVehicle.location();
+    const fuel = await scVehicle.fuel();
+    const battery = await scVehicle.battery();
 
-    res.json({ jobRunID, data: { ...odometer, ...location } });
+    res.json({ jobRunID, data: { ...odometer, ...location, ...fuel, ...battery } });
   } catch (err) {
     next(err);
   }
